@@ -1,0 +1,92 @@
+services:
+  core:
+    build:
+      context: dcache-core/
+      dockerfile: core.dockerfile
+    container_name: core
+    ports:
+      - "2288:2288"
+      - "22224:22224"
+    networks:
+      - app-network
+    environment:
+      - ZOOKEEPER_HOST=zookeeper
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+  door:
+    build:
+      context: dcache-door/
+      dockerfile: door.dockerfile
+    container_name: door
+    ports:
+      - "2880:2880"
+      - "3880:3880"
+    networks:
+      - app-network
+    environment:
+      - ZOOKEEPER_HOST=zookeeper
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+
+  qos:
+    build:
+      context: dcache-qos/
+      dockerfile: qos.dockerfile
+    container_name: qos
+    networks:
+      - app-network
+    environment:
+      - ZOOKEEPER_HOST=zookeeper
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+
+  pinmanager:
+    build:
+      context: dcache-pinmanager/
+      dockerfile: pinmanager.dockerfile
+    container_name: pinmanager
+    networks:
+      - app-network
+    environment:
+      - ZOOKEEPER_HOST=zookeeper
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+
+  pools:
+    build:
+      context: dcache-pool/
+      dockerfile: pool.dockerfile
+    container_name: pools
+    networks:
+      - app-network
+    environment:
+      - ZOOKEEPER_HOST=zookeeper
+      - POOL_NAME=pool
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+
+  zookeeper:
+    container_name: zookeeper
+    image: zookeeper:3.8
+    networks:
+      - app-network
+    ports:
+      - "2181:2181"
+    healthcheck:
+      test: ["CMD", "echo", "ruok", "|", "nc", "localhost", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    environment:
+      ZOO_MY_ID: 1
+      ZOO_SERVERS: "server.1=zookeeper:2888:3888;2181"
+      ZOO_4LW_COMMANDS_WHITELIST: "*"
+  
+networks:
+  app-network:
+    driver: bridge
